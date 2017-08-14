@@ -104,7 +104,7 @@ class FacebookPlayer extends React.Component {
    * Kill all event listeners
    */
   componentWillUnmount() {
-    // this.unsubscribe();
+    this.unsubscribe();
   }
 
   /**
@@ -150,15 +150,13 @@ class FacebookPlayer extends React.Component {
     } = this.props;
     const FB = this.FB;
 
-    const playerId = id + '--player';
-
     // Clear
     this.container.innerHTML = '';
-    // this.unsubscribe();
+    this.unsubscribe();
 
     const playerDiv = document.createElement('div');
     playerDiv.classList.add('fb-video');
-    playerDiv.id = playerId;
+    playerDiv.id = this.playerId;
     playerDiv.setAttribute('data-href', 'https://www.facebook.com/facebook/videos/' + videoId);
     playerDiv.setAttribute('data-allowfullscreen', allowfullscreen || 'false');
     playerDiv.setAttribute('data-autoplay', autoplay || 'false');
@@ -174,24 +172,33 @@ class FacebookPlayer extends React.Component {
       version    : 'v2.5'
     });
 
+    FB.Event.subscribe('xfbml.ready', this.fbEventOnReady);
+  }
 
-    FB.Event.subscribe('xfbml.ready', msg => {
-      window.msg = msg;
-      if (msg.type === 'video' &&
-          (
-            (id && msg.id === playerId) ||
-            !id
-          )
-          ) {
-        this.videoPlayer = msg.instance;
+  get playerId() {
+    const { id } = this.props;
 
-        // Dispatch ready event
-        if (onReady) onReady(id, this.videoPlayer);
+    return id + '--player';
+  }
 
-        // Subscribe to events
-        this.subscribe();
-      }
-    });
+  fbEventOnReady = (msg) => {
+    const { onReady, id } = this.props;
+
+    window.msg = msg;
+    if (msg.type === 'video' &&
+        (
+          (id && msg.id === this.playerId) ||
+          !id
+        )
+        ) {
+      this.videoPlayer = msg.instance;
+
+      // Dispatch ready event
+      if (onReady) { onReady(id, this.videoPlayer); }
+
+      // Subscribe to events
+      this.subscribe();
+    }
   }
 
   /**
@@ -216,9 +223,11 @@ class FacebookPlayer extends React.Component {
   unsubscribe = () => {
     if (this.eventHandlers && this.eventHandlers.length) {
       this.eventHandlers.map(ev => {
-        if (ev.handler.removeListener) ev.handler.removeListener(ev.event);
+        if (ev.handler.release) { ev.handler.release(ev.event); }
       });
     }
+
+    FB.Event.unsubscribe('xfbml.ready', this.fbEventOnReady)
   }
 
   /**

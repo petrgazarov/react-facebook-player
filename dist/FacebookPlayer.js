@@ -72,15 +72,13 @@ var FacebookPlayer = function (_React$Component) {
 
       var FB = _this.FB;
 
-      var playerId = id + '--player';
-
       // Clear
       _this.container.innerHTML = '';
-      // this.unsubscribe();
+      _this.unsubscribe();
 
       var playerDiv = document.createElement('div');
       playerDiv.classList.add('fb-video');
-      playerDiv.id = playerId;
+      playerDiv.id = _this.playerId;
       playerDiv.setAttribute('data-href', 'https://www.facebook.com/facebook/videos/' + videoId);
       playerDiv.setAttribute('data-allowfullscreen', allowfullscreen || 'false');
       playerDiv.setAttribute('data-autoplay', autoplay || 'false');
@@ -96,18 +94,27 @@ var FacebookPlayer = function (_React$Component) {
         version: 'v2.5'
       });
 
-      FB.Event.subscribe('xfbml.ready', function (msg) {
-        window.msg = msg;
-        if (msg.type === 'video' && (id && msg.id === playerId || !id)) {
-          _this.videoPlayer = msg.instance;
+      FB.Event.subscribe('xfbml.ready', _this.fbEventOnReady);
+    };
 
-          // Dispatch ready event
-          if (onReady) onReady(id, _this.videoPlayer);
+    _this.fbEventOnReady = function (msg) {
+      var _this$props2 = _this.props,
+          onReady = _this$props2.onReady,
+          id = _this$props2.id;
 
-          // Subscribe to events
-          _this.subscribe();
+
+      window.msg = msg;
+      if (msg.type === 'video' && (id && msg.id === _this.playerId || !id)) {
+        _this.videoPlayer = msg.instance;
+
+        // Dispatch ready event
+        if (onReady) {
+          onReady(id, _this.videoPlayer);
         }
-      });
+
+        // Subscribe to events
+        _this.subscribe();
+      }
     };
 
     _this.subscribe = function () {
@@ -126,9 +133,13 @@ var FacebookPlayer = function (_React$Component) {
     _this.unsubscribe = function () {
       if (_this.eventHandlers && _this.eventHandlers.length) {
         _this.eventHandlers.map(function (ev) {
-          if (ev.handler.removeListener) ev.handler.removeListener(ev.event);
+          if (ev.handler.release) {
+            ev.handler.release(ev.event);
+          }
         });
       }
+
+      FB.Event.unsubscribe('xfbml.ready', _this.fbEventOnReady);
     };
 
     _this.refContainer = function (container) {
@@ -214,9 +225,9 @@ var FacebookPlayer = function (_React$Component) {
 
   }, {
     key: 'componentWillUnmount',
-    value: function componentWillUnmount() {}
-    // this.unsubscribe();
-
+    value: function componentWillUnmount() {
+      this.unsubscribe();
+    }
 
     /**
      * Load Facebook SDK if it is not loaded already.
@@ -227,21 +238,6 @@ var FacebookPlayer = function (_React$Component) {
      * Create player.
      *
      * @param {string} Facebook video id
-     */
-
-
-    /**
-     * Listen to events based on eventsToListen var.
-     */
-
-
-    /**
-     * Stop listening to events.
-     */
-
-
-    /**
-     * Set container var to reuse as DOM object.
      */
 
   }, {
@@ -262,6 +258,29 @@ var FacebookPlayer = function (_React$Component) {
         })
       );
     }
+  }, {
+    key: 'playerId',
+    get: function get() {
+      var id = this.props.id;
+
+
+      return id + '--player';
+    }
+
+    /**
+     * Listen to events based on eventsToListen var.
+     */
+
+
+    /**
+     * Stop listening to events.
+     */
+
+
+    /**
+     * Set container var to reuse as DOM object.
+     */
+
   }]);
 
   return FacebookPlayer;
